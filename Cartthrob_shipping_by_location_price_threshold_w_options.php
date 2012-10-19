@@ -1,8 +1,8 @@
 <?php if ( ! defined('CARTTHROB_PATH')) Cartthrob_core::core_error('No direct script access allowed');
 
-class Cartthrob_shipping_by_location_weight_threshold_w_options extends Cartthrob_shipping
+class Cartthrob_shipping_by_location_price_threshold_w_options extends Cartthrob_shipping
 {
-	public $title = 'Cartthrob_shipping_by_location_weight_threshold_w_options';
+	public $title = 'Cartthrob_shipping_by_location_price_threshold_w_options';
 	public $classname = __CLASS__;
 	public $note = 'location_threshold_overview';
 	public $settings = array(
@@ -59,23 +59,33 @@ class Cartthrob_shipping_by_location_weight_threshold_w_options extends Cartthro
 					'type'			=>	'text',	
 				),
 				array(
-					'name' => 'rate',
+					'name' => 'Default',
 						'short_name' => 'default_rate',
 					'note' => 'rate_example',
 						'type' => 'text'
 					),
 					array(
-						'name' => 'two_day',
-						'short_name' => 'two_day_rate',
+						'name' => 'First Class',
+						'short_name' => 'first_class_rate',
  						'type' => 'text'
 					),
 					array(
-						'name' => 'overnight',
-						'short_name' => 'overnight_rate',
+						'name' => 'Second Class',
+						'short_name' => 'second_class_rate',
+ 						'type' => 'text'
+					),
+					array(
+						'name' => 'Special Next Day Delivery',
+						'short_name' => 'special_next_day_delivery_rate',
 					'type' => 'text'
-				),
+					),
+					array(
+						'name' => 'Recorded Delivery',
+						'short_name' => 'recorded_delivery_rate',
+					'type' => 'text'
+					),
 				array(
-					'name' => 'weight_threshold',
+					'name' => 'Price Threshold',
 					'short_name' => 'threshold',
 					'note' => 'quantity_threshold_example',
 					'type' => 'text'
@@ -106,8 +116,10 @@ class Cartthrob_shipping_by_location_weight_threshold_w_options extends Cartthro
 	public $cost = 0; 
 	public $default_rates = array(
 		'default_rate'		=> 0,
-		'two_day_rate'		=> 0,
-		'overnight_rate'	=> 0,
+		'first_class_rate'	=> 0,
+		'second_class_rate'		=> 0,
+		'special_next_day_delivery_rate'		=> 0,
+		'recorded_delivery_rate'		=> 0
 
 		); 
 
@@ -116,8 +128,10 @@ class Cartthrob_shipping_by_location_weight_threshold_w_options extends Cartthro
 		// @TODO language
 		$this->rate_titles = array(
 				'default_rate'	=> 'Standard',
-				'two_day_rate'	=> 'Two-Day',
-				'overnight_rate'	=> 'Overnight',
+				'first_class_rate'	=> 'First Class',
+				'second_class_rate'	=> 'Second Class',
+				'special_next_day_delivery_rate'	=> 'Special Next Day Delivery',
+				'recorded_delivery_rate' => 'Recorded Delivery'
 			);
 		if ($this->core->cart->count() <= 0 || $this->core->cart->shippable_subtotal() <= 0)
 		{
@@ -130,12 +144,20 @@ class Cartthrob_shipping_by_location_weight_threshold_w_options extends Cartthro
 			case "default_rate":
 				$rate = "default_rate";
 				break;
-			case "two_day_rate": 
-				$rate = "two_day_rate"; 
+			case "first_class_rate": 
+				$rate = "first_class_rate"; 
 				break;
-			case "overnight_rate": 
-				$rate = "overnight_rate"; 
+			case "second_class_rate": 
+				$rate = "second_class_rate"; 
 				break;
+			case "special_next_day_delivery_rate": 
+				$rate = "special_next_day_delivery_rate"; 
+				break;
+			case "recorded_delivery_rate": 
+				$rate = "recorded_delivery_rate"; 
+				break;
+
+
 		}
 		$customer_info = $this->core->cart->customer_info(); 
 
@@ -159,23 +181,28 @@ class Cartthrob_shipping_by_location_weight_threshold_w_options extends Cartthro
 		$last_rate = '';
 		
 		$weight = $this->core->cart->shippable_weight();
+		$price = $this->core->cart->cart_subtotal();
 
 		foreach ($this->plugin_settings('thresholds', array()) as $threshold_setting)
 		{
 			// the last rates listed. 
 			$default_rates["default_rate"] 	= $threshold_setting["default_rate"];
-			$default_rates["two_day_rate"] 	= $threshold_setting["two_day_rate"];
-			$default_rates["overnight_rate"] 	= $threshold_setting["overnight_rate"];
-			
+			$default_rates["first_class_rate"] 	= $threshold_setting["first_class_rate"];
+			$default_rates["second_class_rate"] 	= $threshold_setting["second_class_rate"];
+			$default_rates["special_next_day_delivery_rate"] 	= $threshold_setting["special_next_day_delivery_rate"];
+			$default_rates["recorded_delivery_rate"] 	= $threshold_setting["recorded_delivery_rate"];
+
 			$location_array	= preg_split('/\s*,\s*/', trim($threshold_setting['location']));
 			
 			if (in_array($location, $location_array))
 			{
  				$this->rates["default_rate"] 	= $threshold_setting["default_rate"];
- 				$this->rates["two_day_rate"] 	= $threshold_setting["two_day_rate"];
- 				$this->rates["overnight_rate"] 	= $threshold_setting["overnight_rate"];
+ 				$this->rates["first_class_rate"] 	= $threshold_setting["first_class_rate"];
+				$this->rates["second_class_rate"] 	= $threshold_setting["second_class_rate"];
+ 				$this->rates["special_next_day_delivery_rate"] 	= $threshold_setting["special_next_day_delivery_rate"];
+ 				$this->rates["recorded_delivery_rate"] 	= $threshold_setting["recorded_delivery_rate"];
 
- 				if ($weight > $threshold_setting['threshold'])
+ 				if ($price > $threshold_setting['threshold'])
 				{
 					$last_rate = $threshold_setting[$rate];
 					continue;
@@ -193,11 +220,12 @@ class Cartthrob_shipping_by_location_weight_threshold_w_options extends Cartthro
 			elseif (in_array('GLOBAL',$location_array)) 
 			{
 
-				if ($weight > $threshold_setting['threshold'])
+				if ($price > $threshold_setting['threshold'])
 				{
 					$this->rates["default_rate"] 	= $threshold_setting["default_rate"];
-	 				$this->rates["two_day_rate"] 	= $threshold_setting["two_day_rate"];
-	 				$this->rates["overnight_rate"] 	= $threshold_setting["overnight_rate"];
+	 				$this->rates["first_class_rate"] 	= $threshold_setting["first_class_rate"];
+	 				$this->rates["second_class_rate"] 	= $threshold_setting["second_class_rate"];
+	 				$this->rates["special_next_day_delivery_rate"] 	= $threshold_setting["special_next_day_delivery_rate"];
 	 				
 					$last_rate = $threshold_setting[$rate];
 					continue;
@@ -207,8 +235,10 @@ class Cartthrob_shipping_by_location_weight_threshold_w_options extends Cartthro
 					$shipping = ($this->plugin_settings('mode') == 'rate') ? $price * $threshold_setting[$rate] : $threshold_setting[$rate];
 
 					$this->rates["default_rate"] 	= $threshold_setting["default_rate"];
-	 				$this->rates["two_day_rate"] 	= $threshold_setting["two_day_rate"];
-	 				$this->rates["overnight_rate"] 	= $threshold_setting["overnight_rate"];
+	 				$this->rates["first_class_rate"] 	= $threshold_setting["first_class_rate"];
+					$this->rates["second_class_rate"] 	= $threshold_setting["second_class_rate"];
+	 				$this->rates["special_next_day_delivery_rate"] 	= $threshold_setting["special_next_day_delivery_rate"];
+
 	 				
 					$priced = TRUE;
 
